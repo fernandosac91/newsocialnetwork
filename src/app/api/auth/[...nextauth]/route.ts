@@ -15,7 +15,7 @@ export const authOptions: NextAuthOptions = {
       },
       async authorize(credentials, req) {
         if (!credentials?.email || !credentials?.password) {
-          throw new Error('Invalid credentials');
+          return null;
         }
 
         try {
@@ -71,12 +71,12 @@ export const authOptions: NextAuthOptions = {
           });
 
           if (!user || !user.hashedPassword) {
-            throw new Error('Invalid credentials');
+            return null;
           }
 
           const passwordMatch = await compare(credentials.password, user.hashedPassword);
           if (!passwordMatch) {
-            throw new Error('Invalid credentials');
+            return null;
           }
 
           return {
@@ -89,7 +89,7 @@ export const authOptions: NextAuthOptions = {
           };
         } catch (error) {
           console.error('Authentication error:', error);
-          throw error; // Let NextAuth handle the error
+          return null;
         }
       },
     }),
@@ -123,6 +123,7 @@ export const authOptions: NextAuthOptions = {
     signOut: '/auth/signout',
     error: '/auth/error',
   },
+  secret: process.env.NEXTAUTH_SECRET,
   debug: process.env.NODE_ENV === 'development',
 };
 
