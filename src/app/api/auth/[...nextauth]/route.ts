@@ -2,7 +2,7 @@ import NextAuth, { NextAuthOptions } from 'next-auth';
 import CredentialsProvider from 'next-auth/providers/credentials';
 import { PrismaAdapter } from '@auth/prisma-adapter';
 import { prisma } from '@/lib/prisma';
-import { compare } from 'bcryptjs'; // Changed from bcrypt to bcryptjs
+import { compare } from 'bcryptjs';
 
 export const authOptions: NextAuthOptions = {
   adapter: PrismaAdapter(prisma) as any,
@@ -13,9 +13,9 @@ export const authOptions: NextAuthOptions = {
         email: { label: 'Email', type: 'email' },
         password: { label: 'Password', type: 'password' },
       },
-      async authorize(credentials) {
+      async authorize(credentials, req) {
         if (!credentials?.email || !credentials?.password) {
-          return null;
+          throw new Error('Invalid credentials');
         }
 
         try {
@@ -71,12 +71,12 @@ export const authOptions: NextAuthOptions = {
           });
 
           if (!user || !user.hashedPassword) {
-            return null;
+            throw new Error('Invalid credentials');
           }
 
           const passwordMatch = await compare(credentials.password, user.hashedPassword);
           if (!passwordMatch) {
-            return null;
+            throw new Error('Invalid credentials');
           }
 
           return {
@@ -89,13 +89,14 @@ export const authOptions: NextAuthOptions = {
           };
         } catch (error) {
           console.error('Authentication error:', error);
-          return null;
+          throw error; // Let NextAuth handle the error
         }
       },
     }),
   ],
   session: {
     strategy: 'jwt',
+    maxAge: 30 * 24 * 60 * 60, // 30 days
   },
   callbacks: {
     async jwt({ token, user }) {
@@ -122,6 +123,7 @@ export const authOptions: NextAuthOptions = {
     signOut: '/auth/signout',
     error: '/auth/error',
   },
+  debug: process.env.NODE_ENV === 'development',
 };
 
 const handler = NextAuth(authOptions);
