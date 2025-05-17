@@ -2,7 +2,7 @@ const { createServer } = require('http');
 const { parse } = require('url');
 const next = require('next');
 const { Server } = require('socket.io');
-const { initSocketServer } = require('./src/lib/socket/server');
+const { initSocketServer } = require('./src/lib/socket/socketServer');
 
 const dev = process.env.NODE_ENV !== 'production';
 const hostname = 'localhost';
