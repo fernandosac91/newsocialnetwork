@@ -1,7 +1,10 @@
 const { createServer } = require('http');
 const { parse } = require('url');
 const next = require('next');
-const { initSocketServer } = require('./src/lib/socket/socketServer.ts');
+
+// Import the socket server initialization function
+// Note: Using require() for CommonJS compatibility
+const { initSocketServer } = require('./src/lib/socket/socketServer.js');
 
 const dev = process.env.NODE_ENV !== 'production';
 const hostname = process.env.HOSTNAME || 'localhost';
