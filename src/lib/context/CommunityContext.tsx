@@ -44,7 +44,6 @@ export function CommunityProvider({ children }: { children: ReactNode }) {
   // Extract community name from the URL path if available
   const getCommunityFromPath = (): string | null => {
     const parts = pathname.split('/');
-    // First part will be empty because pathname starts with /
     if (parts.length > 1 && parts[1] !== '' && !['api', 'auth', 'admin', 'dashboard', 'profile', 'messages', 'notifications', 'circles', 'events', 'connections'].includes(parts[1])) {
       return parts[1];
     }
@@ -53,23 +52,44 @@ export function CommunityProvider({ children }: { children: ReactNode }) {
 
   // Navigate to the corresponding page in the selected community
   const navigateToCorrespondingPageInCommunity = (community: Community) => {
-    // If we're in a feature page like circles, events, etc.
     const currentPath = pathname;
     
     if (currentPath.includes('/circles/')) {
-      // Currently on a specific circle page - redirect to community circles
       router.push(`/${community.name}/circles`);
     } else if (currentPath.includes('/events/')) {
-      // Currently on a specific event page - redirect to community events
       router.push(`/${community.name}/events`);
     } else if (currentPath.includes('/circles')) {
       router.push(`/${community.name}/circles`);
     } else if (currentPath.includes('/events')) {
       router.push(`/${community.name}/events`);
     } else {
-      // If we're not in a feature page, just redirect to the community home
       router.push(`/${community.name}`);
     }
+  };
+
+  // Fetch all communities with retry mechanism
+  const fetchCommunitiesWithRetry = async (retries = 3, delay = 1000): Promise<Community[]> => {
+    for (let i = 0; i < retries; i++) {
+      try {
+        const response = await fetch('/api/communities', {
+          headers: {
+            'Accept': 'application/json',
+            'Content-Type': 'application/json',
+          },
+        });
+        
+        if (!response.ok) {
+          throw new Error(`HTTP error! status: ${response.status}`);
+        }
+        
+        const data = await response.json();
+        return data;
+      } catch (err) {
+        if (i === retries - 1) throw err;
+        await new Promise(resolve => setTimeout(resolve, delay));
+      }
+    }
+    throw new Error('Failed to fetch communities after multiple retries');
   };
 
   // Fetch all communities when the component mounts
@@ -78,14 +98,7 @@ export function CommunityProvider({ children }: { children: ReactNode }) {
       try {
         setLoading(true);
         
-        const response = await fetch('/api/communities');
-        
-        // If API fails or returns error, use default communities
-        if (!response.ok) {
-          throw new Error('Failed to fetch communities');
-        }
-        
-        const data = await response.json();
+        const data = await fetchCommunitiesWithRetry();
         setCommunities(data);
         
         // Check if we have a community in the URL
@@ -98,11 +111,9 @@ export function CommunityProvider({ children }: { children: ReactNode }) {
           if (communityFromUrl) {
             setSelectedCommunity(communityFromUrl);
           } else if (data.length > 0) {
-            // If community from URL not found, but we have communities, select the first one
             setSelectedCommunity(data[0]);
           }
         } else if (data.length > 0) {
-          // If no community in URL, select the first one
           setSelectedCommunity(data[0]);
         }
         
@@ -129,11 +140,9 @@ export function CommunityProvider({ children }: { children: ReactNode }) {
           if (communityFromUrl) {
             setSelectedCommunity(communityFromUrl);
           } else {
-            // If community from URL not found, select the first default one
             setSelectedCommunity(defaultCommunities[0]);
           }
         } else {
-          // If no community in URL, select the first default one
           setSelectedCommunity(defaultCommunities[0]);
         }
         
@@ -174,4 +183,4 @@ export function CommunityProvider({ children }: { children: ReactNode }) {
 }
 
 // Create a hook to use the context
-export const useCommunity = () => useContext(CommunityContext); 
+export const useCommunity = () => useContext(CommunityContext);
