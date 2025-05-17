@@ -1,0 +1,15 @@
+version: '3.8'
+
+services:
+  app:
+    volumes:
+      - .:/app
+      - /app/node_modules
+    environment:
+      - NODE_ENV=development
+      - DATABASE_URL=postgresql://postgres:password@postgres:5432/newsocialnetwork
+
+  postgres:
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    command: ["postgres", "-c", "log_statement=all", "-c", "log_destination=stderr"] 

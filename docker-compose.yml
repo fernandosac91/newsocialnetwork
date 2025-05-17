@@ -1,0 +1,44 @@
+version: '3.8'
+
+services:
+  # Main application container with admin API server
+  app:
+    container_name: newsocialnetwork_app
+    build:
+      context: .
+      dockerfile: Dockerfile.minimal
+    restart: always
+    ports:
+      - "3001:3000"
+    environment:
+      - DATABASE_URL=postgresql://postgres:password@postgres:5432/newsocialnetwork
+    depends_on:
+      - postgres
+
+  # PostgreSQL Database
+  postgres:
+    container_name: newsocialnetwork_postgres
+    image: postgres:15
+    restart: always
+    environment:
+      - POSTGRES_USER=postgres
+      - POSTGRES_PASSWORD=password
+      - POSTGRES_DB=newsocialnetwork
+    ports:
+      - "5433:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    command: ["postgres", "-c", "log_statement=all", "-c", "log_destination=stderr"]
+
+  # Adminer for database management (optional)
+  adminer:
+    container_name: newsocialnetwork_adminer
+    image: adminer
+    restart: always
+    ports:
+      - "8081:8080"
+    depends_on:
+      - postgres
+
+volumes:
+  postgres_data: 

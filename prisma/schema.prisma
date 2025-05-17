@@ -1,0 +1,302 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+// Looking for ways to speed up your queries, or scale easily with your serverless or edge functions?
+// Try Prisma Accelerate: https://pris.ly/cli/accelerate-init
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "sqlite"
+  url      = "file:./dev.db"
+}
+
+// Enums
+enum UserRole {
+  ADMIN
+  MODERATOR
+  FACILITATOR
+  MEMBER
+}
+
+enum UserStatus {
+  PENDING
+  APPROVED
+  REJECTED
+}
+
+enum FriendStatus {
+  PENDING
+  ACCEPTED
+  REJECTED
+}
+
+enum NotificationType {
+  EVENT_INVITE
+  CIRCLE_JOIN
+  FRIEND_REQUEST
+  CHAT
+}
+
+// Models
+model User {
+  id                     String        @id @default(uuid())
+  name                   String?
+  email                  String        @unique
+  emailVerified          DateTime?
+  hashedPassword         String?       // Optional for OAuth support
+  photo                  String?
+  role                   UserRole      @default(MEMBER)
+  status                 UserStatus    @default(PENDING)
+  communityId            String?
+  stripeCustomerId       String?
+  stripeSubscriptionStatus String?
+  trialEndsAt            DateTime?
+  createdAt              DateTime      @default(now())
+  updatedAt              DateTime      @updatedAt
+
+  // Relations
+  community              Community?    @relation(fields: [communityId], references: [id])
+  profile                UserProfile?
+  accounts               Account[]
+  sessions               Session[]
+  subscriptions          Subscription[]
+  files                  File[]
+  createdEvents          Event[]       @relation("EventCreator")
+  attendingEvents        EventAttendee[]
+  createdCircles         Circle[]      @relation("CircleCreator")
+  memberOfCircles        CircleMember[]
+  sentMessages           ChatMessage[] @relation("MessageSender")
+  receivedMessages       ChatMessage[] @relation("MessageReceiver")
+  sentFriendRequests     Friend[]      @relation("FriendRequester")
+  receivedFriendRequests Friend[]      @relation("FriendAddressee")
+  notifications          Notification[]
+}
+
+model Account {
+  id                String  @id @default(cuid())
+  userId            String
+  type              String
+  provider          String
+  providerAccountId String
+  refresh_token     String?
+  access_token      String?
+  expires_at        Int?
+  token_type        String?
+  scope             String?
+  id_token          String?
+  session_state     String?
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([provider, providerAccountId])
+}
+
+model Session {
+  id           String   @id @default(cuid())
+  sessionToken String   @unique
+  userId       String
+  expires      DateTime
+  user         User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+}
+
+model VerificationToken {
+  identifier String
+  token      String   @unique
+  expires    DateTime
+
+  @@unique([identifier, token])
+}
+
+model Subscription {
+  id                    String   @id @default(cuid())
+  userId                String
+  stripeCustomerId      String?
+  stripeSubscriptionId  String?
+  stripePriceId         String?
+  stripeCurrentPeriodEnd DateTime?
+  status                String   @default("inactive")
+  createdAt             DateTime @default(now())
+  updatedAt             DateTime @updatedAt
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+}
+
+model File {
+  id        String   @id @default(cuid())
+  name      String
+  key       String   @unique
+  url       String?
+  size      Int?
+  userId    String
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+}
+
+model Community {
+  id          String   @id @default(uuid())
+  name        String
+  description String?
+  createdAt   DateTime @default(now())
+  
+  // Relations
+  users       User[]
+  events      Event[]
+  circles     Circle[]
+}
+
+model UserProfile {
+  id          String   @id @default(uuid())
+  userId      String   @unique
+  bio         String?
+  workTitle   String?
+  location    String?
+  interests   String?  // Stored as JSON string to handle string[]
+  coverImage  String?  // URL to cover image
+  
+  // Relations
+  user        User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+}
+
+model Event {
+  id          String   @id @default(uuid())
+  title       String
+  description String?
+  date        DateTime
+  location    String?
+  communityId String
+  createdById String
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+  
+  // Relations
+  community   Community @relation(fields: [communityId], references: [id])
+  createdBy   User      @relation("EventCreator", fields: [createdById], references: [id])
+  attendees   EventAttendee[]
+  
+  // Ensure events can only be accessed by users in the same community
+  @@index([communityId])
+}
+
+model EventAttendee {
+  eventId   String
+  userId    String
+  createdAt DateTime @default(now())
+  
+  // Relations
+  event     Event    @relation(fields: [eventId], references: [id], onDelete: Cascade)
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  
+  @@id([eventId, userId])
+  
+  // Ensure faster lookups
+  @@index([userId])
+  @@index([eventId])
+}
+
+model Circle {
+  id          String   @id @default(uuid())
+  name        String
+  username    String   @unique // Unique username for friendly URLs
+  description String?
+  communityId String
+  createdById String
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+  
+  // Relations
+  community   Community @relation(fields: [communityId], references: [id])
+  createdBy   User      @relation("CircleCreator", fields: [createdById], references: [id])
+  members     CircleMember[]
+  messages    ChatMessage[] @relation("CircleMessages")
+  
+  // Ensure circles can only be accessed by users in the same community
+  @@index([communityId])
+}
+
+model CircleMember {
+  circleId  String
+  userId    String
+  createdAt DateTime @default(now())
+  
+  // Relations
+  circle    Circle   @relation(fields: [circleId], references: [id], onDelete: Cascade)
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  
+  @@id([circleId, userId])
+  
+  // Ensure faster lookups
+  @@index([userId])
+  @@index([circleId])
+}
+
+model ChatMessage {
+  id         String    @id @default(uuid())
+  content    String
+  sentAt     DateTime  @default(now())
+  
+  // User who sent the message
+  senderId   String
+  sender     User      @relation("MessageSender", fields: [senderId], references: [id])
+  
+  // Optional: Individual recipient (for direct messages)
+  receiverId String?
+  receiver   User?     @relation("MessageReceiver", fields: [receiverId], references: [id])
+  
+  // Optional: Circle for group chats
+  circleId   String?
+  circle     Circle?   @relation("CircleMessages", fields: [circleId], references: [id])
+  
+  // Added indexes for better query performance
+  @@index([senderId])
+  @@index([receiverId])
+  @@index([circleId])
+  
+  // At least one of receiverId or circleId must be set
+  // This constraint cannot be directly enforced in Prisma schema
+  // Will need application-level validation
+}
+
+model Friend {
+  id          String       @id @default(uuid())
+  requesterId String
+  addresseeId String
+  status      FriendStatus @default(PENDING)
+  createdAt   DateTime     @default(now())
+  
+  // Relations
+  requester   User         @relation("FriendRequester", fields: [requesterId], references: [id])
+  addressee   User         @relation("FriendAddressee", fields: [addresseeId], references: [id])
+  
+  @@unique([requesterId, addresseeId])
+}
+
+model Notification {
+  id          String           @id @default(uuid())
+  userId      String
+  type        NotificationType
+  referenceId String?
+  read        Boolean          @default(false)
+  createdAt   DateTime         @default(now())
+  
+  // Relations
+  user        User             @relation(fields: [userId], references: [id], onDelete: Cascade)
+  
+  @@index([userId])
+}
+
+model AdminLog {
+  id        String   @id @default(uuid())
+  action    String
+  userId    String?
+  details   String   // JSON string of action details
+  timestamp DateTime @default(now())
+  
+  @@index([userId])
+  @@index([action])
+  @@index([timestamp])
+}

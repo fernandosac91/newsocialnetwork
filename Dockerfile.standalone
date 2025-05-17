@@ -1,0 +1,20 @@
+FROM node:18-alpine
+
+# Set working directory
+WORKDIR /app
+
+# Create a simple server.js file
+RUN echo 'const http = require("http"); \
+const port = 3000; \
+const server = http.createServer((req, res) => { \
+  res.statusCode = 200; \
+  res.setHeader("Content-Type", "text/html"); \
+  res.end(`<!DOCTYPE html><html><head><title>News Social Network</title><style>body{font-family:Arial,sans-serif;max-width:800px;margin:0 auto;padding:20px}h1{color:#333}.container{border:1px solid #ddd;padding:20px;border-radius:5px}.success{color:green}</style></head><body><h1>News Social Network</h1><div class="container"><h2>Docker Container Status</h2><p class="success">✅ Docker container is running successfully!</p><p>This is a standalone Docker container for the News Social Network application.</p></div></body></html>`); \
+}); \
+server.listen(port, () => { \
+  console.log(`Server running at http://localhost:${port}/`); \
+});' > server.js
+
+EXPOSE 3000
+
+CMD ["node", "server.js"] 

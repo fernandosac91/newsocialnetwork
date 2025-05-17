@@ -1,0 +1,16 @@
+FROM node:18-alpine
+
+WORKDIR /app
+
+COPY . .
+
+# Create a simple index.html file
+RUN echo '<!DOCTYPE html><html><head><title>News Social Network</title><style>body{font-family:Arial,sans-serif;max-width:800px;margin:0 auto;padding:20px}h1{color:#333}.container{border:1px solid #ddd;padding:20px;border-radius:5px}.success{color:green}</style></head><body><h1>News Social Network</h1><div class="container"><h2>Docker Container Status</h2><p class="success">✅ Docker container is running successfully!</p><p>This is a simple Docker container for the News Social Network application.</p></div></body></html>' > index.html
+
+# Install a simple HTTP server
+RUN npm install -g http-server
+
+EXPOSE 3000
+
+# Start a simple HTTP server
+CMD ["http-server", "-p", "3000"] 

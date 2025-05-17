@@ -1,0 +1,14 @@
+FROM node:18-alpine
+WORKDIR /app
+
+# Copy required files
+COPY package.json .
+COPY prisma ./prisma/
+COPY docker-server.js .
+
+# Install dependencies
+RUN npm install --only=production
+RUN npx prisma generate
+
+EXPOSE 3000
+CMD ["node", "docker-server.js"] 
