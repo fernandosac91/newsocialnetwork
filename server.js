@@ -1,7 +1,7 @@
 const { createServer } = require('http');
 const { parse } = require('url');
 const next = require('next');
-const { initSocketServer } = require('./src/lib/socket/server');
+const { initSocketServer } = require('./src/lib/socket/socketServer');
 
 const dev = process.env.NODE_ENV !== 'production';
 const hostname = process.env.HOSTNAME || 'localhost';
@@ -28,9 +28,7 @@ app.prepare().then(() => {
     }
   });
 
-  // Import and initialize Socket.IO server
-  // We require this here to ensure Next.js is initialized first
-  const { initSocketServer } = require('./src/lib/socket/server');
+  // Initialize Socket.IO server
   initSocketServer(server);
 
   // Start HTTP server
