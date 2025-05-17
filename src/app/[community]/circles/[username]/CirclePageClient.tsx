@@ -90,8 +90,8 @@ export default function CirclePageClient({
     
     try {
       const endpoint = isMember
-        ? `/api/communities/${circle.community.name}/circles/${circle.id}/leave`
-        : `/api/communities/${circle.community.name}/circles/${circle.id}/join`;
+        ? `/api/communities/${circle.community.name}/circles/${circle.username}/leave`
+        : `/api/communities/${circle.community.name}/circles/${circle.username}/join`;
       
       const response = await fetch(endpoint, {
         method: 'POST',
